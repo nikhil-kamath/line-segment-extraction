@@ -1,17 +1,16 @@
-import typing
-from numpy.core.fromnumeric import partition
+from typing import List, Tuple, Set
 import pygame
-from Detection import LineDetector
+from Detection import LineDetector, findSeeds
 
 '''initializes a white map with red points'''
-def initialize_map(Map: pygame.Surface, points: typing.List[typing.Tuple[int, int]]) -> pygame.Surface:
+def initialize_map(Map: pygame.Surface, points: List[Tuple[int, int]]) -> pygame.Surface:
     Map.fill((255, 255, 255))
     for point in points:
         pygame.draw.circle(Map, (0, 0, 0), point, 3)
     return Map
 
 '''allows user to draw points until enter key is pressed. returns the list of all points user drew'''
-def draw_points(Map: pygame.Surface) -> typing.Set[typing.Tuple[int, int]]:
+def draw_points(Map: pygame.Surface) -> Set[Tuple[int, int]]:
     running = True
     points = []
     while running:
@@ -33,7 +32,11 @@ def draw_points(Map: pygame.Surface) -> typing.Set[typing.Tuple[int, int]]:
 
 
 def main():
+    # colors
     WHITE = (255, 255, 255)
+    SEEDCOLOR = (0, 255, 0)
+    LINECOLOR = (255, 0, 255)
+
     pygame.init()
     pygame.display.set_caption("Line Segment Extraction")
     Map = pygame.display.set_mode((1080, 720))
@@ -42,43 +45,25 @@ def main():
     origin = (500, 600)
     pygame.draw.circle(Map, (0, 255, 0), origin, 5)
 
-    seedcolor = (0, 255, 0)
-    linecolor = (255, 0, 255)
-
-    ssd = LineDetector()
-
-    # find our seed
-    valid = False
-    while not valid:
+    # find our seeds
+    seeds = []
+    while True:
         points = draw_points(Map)
-        print(points)
         Map = initialize_map(Map, points)
+        seeds = findSeeds(points, origin)
 
-        seed = ssd.Detect(points, origin)
-        if seed is not None:
-            seed_params, seed_points, indices, points, helper_points = seed
-            valid = True
-        else:
-            valid = False
-            print("seed not found")
-            continue
+        if seeds:
+            break
 
-        segment = ssd.Grow(seed_points, indices, points)
-        if segment is not None:
-            params, fit_points, indices, points, endpoints = segment
-            valid = True
-        else:
-            valid = False
-            print("seed couldn't grow")
-            continue
+        print("invalid points set, no seeds found")
 
-    for point in seed_points:
-        pygame.draw.circle(Map, seedcolor, point, 8)
-    pygame.draw.line(Map, seedcolor, *helper_points, 3)
 
-    for point in fit_points:
-        pygame.draw.circle(Map, linecolor, point, 5)
-    pygame.draw.line(Map, linecolor, *endpoints, 3)
+    for seed in seeds:
+        seed_params, seed_points, indices, _, helper_points = seed
+        print(indices, seed_points)
+        for index in range(*indices):
+            pygame.draw.circle(Map, SEEDCOLOR, points[index], 8)
+        pygame.draw.line(Map, SEEDCOLOR, *helper_points, 3)
 
     running = True
     while running:

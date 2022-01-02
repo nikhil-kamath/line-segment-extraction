@@ -1,10 +1,7 @@
-from typing import FrozenSet
 import numpy as np
-from numpy.lib.arraysetops import intersect1d
 from scipy.odr import ODR, Model
 from scipy.odr.odrpack import RealData
 import math
-
 
 class LineDetector:
     def __init__(self):
@@ -16,9 +13,9 @@ class LineDetector:
 
     '''Returns a valid seed segment given initialization parameters. 
     Requires that points are ordered counterclockwise around origin.'''
-    def Detect(self, points, origin):
+    def Detect(self, points, origin, start_index=0):
         N_P = len(points) # number of points
-        for i in range(N_P - self.P_MIN):
+        for i in range(start_index, 1 + N_P - self.P_MIN):
             flag = True
             j = i + self.SEGMENT_LENGTH
             params = self.fit(points[i:j])
@@ -122,3 +119,21 @@ class LineDetector:
         c2 = -a * y + b * x
         return self.intersect(params, (a2, b2, c2))
 
+'''helper method that returns multiple valid seeds from a set of points. seeds do not overlap'''
+def findSeeds(points, origin):
+    seeds = []
+    ssd = LineDetector()
+    start_index = 0
+    while start_index < len(points):
+        seed = ssd.Detect(points, origin, start_index=start_index)
+
+        # keep finding seeds until our method returns None
+        if not seed:
+            break
+        
+        seed_start, seed_end = seed[2]
+        start_index = seed_end
+
+        seeds.append(seed)
+
+    return seeds
