@@ -1,9 +1,7 @@
-from typing import List
 import numpy as np
-from scipy.odr import ODR, Model
-from scipy.odr.odrpack import RealData
+from scipy.optimize import curve_fit
 import math
-
+'''class with methods to detect seeds and grow them according to parameters of the class'''
 class LineDetector:
     def __init__(self):
         self.EPSILON = 25 # maximum distance from any point to the fit line
@@ -11,6 +9,7 @@ class LineDetector:
         self.SEGMENT_LENGTH = 5 # number of points in seed segment
         self.P_MIN = 5 # minimum number of points in extracted line segment
         self.L_MIN = 200 # minimum length of a detected line segment
+        self.SEED_EPSILON = self.EPSILON # if seed detection has a different epsilon as the growing 
 
     '''Returns a valid seed segment given initialization parameters. 
     Requires that points are ordered counterclockwise around origin.'''
@@ -25,9 +24,9 @@ class LineDetector:
                 prediction = self.predict(params, origin, k)
 
                 # break cases
-                delta_distance = math.dist(k, prediction)
-                epsilon_distance = self.dist_point2line(k, params)
-                if delta_distance > self.DELTA or epsilon_distance > self.EPSILON:
+                delta_failure = math.dist(k, prediction) > self.DELTA
+                epsilon_failure = self.dist_point2line(k, params) > self.SEED_EPSILON
+                if delta_failure or epsilon_failure:
                     flag = False
                     break
             
@@ -35,21 +34,12 @@ class LineDetector:
                 return [params, points[i:j], (i, j), points, self.get_points(params)]
         return None
 
-    def odr_line(self, parameters, x): # parameters are the line equation parameters in standard form of a line
-        a, b, c = parameters
-        return x if b == 0 else (- (a * x + c) / b)
+    def to_optimize(self, x, a, b, c):
+        return (- (a * x + c) / b)
 
-    '''uses scipy ODR to find line of best fit in general form'''
+    '''using scipy curve_fit method to find lines of best fit'''
     def fit(self, points):
-        x = np.array([p[0] for p in points])
-        y = np.array([p[1] for p in points])
-
-        linear_model = Model(self.odr_line)
-        data = RealData(x, y)
-        odr = ODR(data, linear_model, beta0=[1., 1., 1.])
-        output = odr.run()
-
-        return output.beta
+        return curve_fit(self.to_optimize, [p[0] for p in points], [p[1] for p in points])[0]
 
     '''uses line parameters, origin point, and original point to find the predicted location of a point'''
     def predict(self, params, origin, point):
@@ -93,6 +83,9 @@ class LineDetector:
         L, P = 0, 0
         FRONT, BACK = j, i
         
+
+        '''maybe make it so it doesn't do one before the other and does them at the same time instead.
+         otherwise the line overadapts to the front side, then when it goes backwards it doesn't connect to otherwise pretty close points'''
         while FRONT < N_P and self.dist_point2line(points[FRONT], line) < self.EPSILON:
             line = self.fit(points[BACK:FRONT])
             FRONT += 1
@@ -167,6 +160,4 @@ def detectLines(points, origin, ssd: LineDetector, overlap=0):
         lines.append(line)
     
     return lines, seeds
-
-
 
