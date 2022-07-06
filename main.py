@@ -8,7 +8,8 @@ def draw_points(Map: pygame.Surface, points, color=(255, 0, 0), radius=3):
     for p in points: pygame.draw.circle(Map, color, p, radius)
 
 '''allows user to draw points until enter key is pressed. returns the list of all points user drew'''
-def draw_points_loop(Map: pygame.Surface, exit_key = pygame.K_RETURN) -> Set[Tuple[int, int]]:
+def draw_points_loop(Map: pygame.Surface, exit_key = pygame.K_RETURN, BG=(255, 255, 255)) -> Set[Tuple[int, int]]:
+    Map.fill(BG)
     running = True
     points = []
     while running:
@@ -29,13 +30,13 @@ def draw_points_loop(Map: pygame.Surface, exit_key = pygame.K_RETURN) -> Set[Tup
     return points
 
 def move_loop(Map: pygame.Surface, points: List[Tuple[int]], exit_key = pygame.K_RETURN, 
-              BACKGROUND=(255, 255, 255), SEEDCOLOR=(0, 255, 0), LINECOLOR=(255, 0, 255)) -> None:
+              BACKGROUND=(255, 255, 255), SEEDCOLOR=(0, 255, 0), LINECOLOR=(255, 0, 255),
+              HIDDENCOLOR=(255, 170, 255), SEENCOLOR=(255, 0, 0)) -> None:
+    
     running = True
     ld = LineDetector()
     sim = Simulator()
     clock = pygame.time.Clock()
-    PINK = (255, 170, 255)
-    RED = (255, 0, 0)
 
     while running:
         clock.tick(30) # cap at 30 fps cuz my algorithm slow af
@@ -45,18 +46,18 @@ def move_loop(Map: pygame.Surface, points: List[Tuple[int]], exit_key = pygame.K
 
             # reset with all points pink
             Map.fill(BACKGROUND)
-            draw_points(Map, points, color=PINK, radius=3)
+            draw_points(Map, points, color=HIDDENCOLOR, radius=3)
             
             if pygame.mouse.get_focused():
                 origin = pygame.mouse.get_pos()
                 pygame.draw.circle(Map, (0, 255, 0), origin, 5)
                 viewed_points = sim.error(origin, points)
-                draw_points(Map, viewed_points, color=RED, radius=4)
+                draw_points(Map, viewed_points, color=SEENCOLOR, radius=4)
 
                 if output := detectLines(viewed_points, origin, ld, overlap=2):
                     lines, seeds = output
                     for line in lines: display_detected_item(Map, line, LINECOLOR)
-                    # for seed in seeds: display_detected_item(Map, seed, SEEDCOLOR, circle_size=5, line_width=2)
+                    for seed in seeds: display_detected_item(Map, seed, SEEDCOLOR, circle_size=5, line_width=2)
                 else:
                     print("invalid origin location?")
             
@@ -70,61 +71,6 @@ def display_detected_item(Map: pygame.Surface, item, color, circle_size = 8, lin
         pygame.draw.circle(Map, color, p, circle_size)
     pygame.draw.line(Map, color, start, end, line_width)
 
-def main():
-    # initializing pygame
-    pygame.init()
-    pygame.display.set_caption("Line Segment Extraction")
-    Map = pygame.display.set_mode((1080, 720))
-
-    # colors
-    WHITE = (255, 255, 255)
-    SEEDCOLOR = (0, 255, 0)
-    LINECOLOR = (255, 0, 255)
-    # origin = (500, 600)
-
-    # filling with white and creating the origin point
-    # pygame.draw.circle(Map, (0, 255, 0), origin, 5)
-
-    Map.fill(WHITE)
-    points = draw_points_loop(Map)
-    move_loop(Map, points)
-    end_loop()
-    
-    # # find our seeds
-    # ld = LineDetector()
-    # while True:
-    #     points = draw_points_loop(Map)
-    #     Map = initialize_map(Map, points)
-
-    #     output = detectLines(points, origin, ld, overlap=2)
-    #     if output:
-    #         break
-
-    #     print("invalid points set, no seeds found")
-
-    # lines, seeds = output
-    # print(points)
-    # print(f"seeds detected: {len(seeds)}")
-    # print(f"lines extracted: {len(lines)}")
-    # print("item we're dealing with: ")
-    # print(*lines[0], sep='\n')
-    # print("line of best fit found by ld:")
-    # print(lines[0][0], lines[0][4])
-    # print("line of best fit using these same points with ODR:")
-    # test_fit = ld.fit(lines[0][1])
-    # print(test_fit)
-    # pygame.draw.line(Map, (0, 0, 255), *ld.get_points(test_fit), 9)
-    # seed_fit = ld.fit(seeds[0][1])
-    # print(seed_fit)
-    # pygame.draw.line(Map, (0, 255, 255), *ld.get_points(seed_fit), 9)
-
-    # for line in lines:
-    #     display_detected_item(Map, line, LINECOLOR)
-    # for seed in seeds:
-    #     display_detected_item(Map, seed, SEEDCOLOR, circle_size=5, line_width=2)
-    
-    # end_loop()
-
 def end_loop() -> None:
     running = True
     while running:
@@ -134,5 +80,16 @@ def end_loop() -> None:
         
         pygame.display.update()
 
+def main():
+    # initializing pygame
+    pygame.init()
+    pygame.display.set_caption("Line Segment Extraction")
+    Map = pygame.display.set_mode((1080, 720))
+
+    points = draw_points_loop(Map)
+    move_loop(Map, points)
+    end_loop()
+    
+    
 if __name__ == "__main__":
     main()
