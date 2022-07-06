@@ -118,7 +118,7 @@ class LineDetector:
         c2 = -a * y + b * x
         return self.intersect(params, (a2, b2, c2))
 
-'''helper method that returns multiple valid seeds from a set of points. seeds do not overlap'''
+'''faster version of detectLines which only extracts the seeds'''
 def findSeeds(points, origin):
     seeds = []
     ssd = LineDetector()
