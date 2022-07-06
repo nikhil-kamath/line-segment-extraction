@@ -34,12 +34,13 @@ class LineDetector:
                 return [params, points[i:j], (i, j), points, self.get_points(params)]
         return None
 
-    def to_optimize(self, x, a, b, c):
+    '''minimize distance to line of best fit'''
+    def get_y(self, x, a, b, c):
         return (- (a * x + c) / b)
 
     '''using scipy curve_fit method to find lines of best fit'''
     def fit(self, points):
-        return curve_fit(self.to_optimize, [p[0] for p in points], [p[1] for p in points])[0]
+        return curve_fit(self.get_y, [p[0] for p in points], [p[1] for p in points])[0]
 
     '''uses line parameters, origin point, and original point to find the predicted location of a point'''
     def predict(self, params, origin, point):
@@ -63,6 +64,7 @@ class LineDetector:
         c = (x1-x2)*y1 + (y2-y1)*x1
         return a, b, c
     
+    '''calculates orthogonal distance from point to line'''
     def dist_point2line(self, p, params):
         a, b, c = params
         x, y = p
@@ -70,10 +72,12 @@ class LineDetector:
         denominator = math.sqrt(a**2 + b**2)
         return numerator / denominator
 
+    '''gets 2 points on a given line'''
     def get_points(self, params):
         x0, x1 = 10, 1000
-        return (x0, self.odr_line(params, x0)), (x1, self.odr_line(params, x1))
+        return (x0, self.get_y(x0, *params)), (x1, self.get_y(x1, *params))
 
+    
     '''grows line segment forwards and backwards until it reaches a point greater than epsilon away'''
     def Grow(self, seed, points):
         _, seed_points, indices, _, _ = seed
@@ -138,7 +142,7 @@ def detectLines(points, origin, ssd: LineDetector, overlap=0):
     lines = []
     seeds = []
     start_index = 0
-    print(origin)
+    # print(origin)
     while start_index < len(points):
         seed = ssd.Detect(points, origin, start_index=start_index)
 
